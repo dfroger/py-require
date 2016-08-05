@@ -49,6 +49,10 @@ bcsuffix = 'c@' + sys.version[:3].replace('.', '-')
 #: that are loaded by :func:`require`.
 modules = {}
 
+#: This is a private value that is incremented with each cascade reload
+#: to avoid cyclic dependencies resulting in infinite recursion.
+_global_cascade_id = 0
+
 
 class RequireError(ImportError):
   """
@@ -76,10 +80,15 @@ class Context(object):
     True if the current reload procedura should happen inplace.
   """
 
-  def __init__(self, path, reload=False, cascade=False, inplace=False):
+  def __init__(self, path, reload=False, cascade=False, inplace=False, cascade_id=None):
     self.path = list(path)
     self.cascade_reload = bool(reload and cascade)
     self.reload_inplace = bool(reload and inplace)
+    self.cascade_id = cascade_id
+
+  def __repr__(self):
+    return 'shroud.Context(%r, %r, %r, %r)' % (
+      self.path, self.cascade_reload, self.reload_inplace, self.cascade_id)
 
 
 def require(file, directory=None, path=(), reload=False, cascade=False, inplace=False):
@@ -117,21 +126,29 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
   :raise RequireError: If the module could not be found or loaded.
   """
 
+  global _global_cascade_id
+
+  # Increase the cascade ID if cascading is requested explicitly.
+  if reload and cascade:
+    _global_cascade_id += 1
+
   # file must be a UNIX-style path always. Convert it to the current
   # filesystem's format.
   file = _unix_to_ospath(file)
 
-  ofile = file
+  # Read the context information from the caller.
   frame = sys._getframe(1).f_globals
   context = frame.get('__shroud__', None)
   if isinstance(context, Context) and context.cascade_reload:
     reload = True
     cascade = True
-    inplace = cascade.reload_inplace
+    inplace = context.reload_inplace
   if isinstance(context, Context):
     path = list(path)
     path.extend(context.path)
 
+  # If no local directory was supplied, use the calling script's parent
+  # directory to load relative modules from.
   if not directory:
     # Determine the directory to load the module from the callers
     # global __file__ variable.
@@ -140,33 +157,43 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
       raise RuntimeError('require() caller must provide __file__ variable')
     directory = os.path.abspath(os.path.dirname(caller_file))
 
-  file = _get_best_candidate(file, directory, path)
-  if not file:
-    raise RequireError(ofile)
+  # If we're in a cascading reload, we have to allocate a new ID.
+  cascade_id = context.cascade_id if context else None
+  if reload and cascade and cascade_id is None:
+    cascade_id = _global_cascade_id
+
+  # Find the best matching file that we can import.
+  load_file = _get_best_candidate(file, directory, path)
+  if not load_file:
+    raise RequireError(file)
 
   # Check if we already loaded this module and return it preemptively.
-  mod = modules.get(file)
+  mod = modules.get(load_file)
   if mod and not reload:
     return mod
+  if mod and reload and cascade:
+    # Check if we're in the same cascading load process.
+    if mod.__shroud__.cascade_id == _global_cascade_id:
+      return mod
 
   # The filename and file type that we're ultimately going to load
   # depends on the availability of the cache.
-  fullname = file
+  fullname = load_file
   mode = 'source'
-  if file.endswith(bcsuffix):
-    file = file[:-len(bcsuffix)]
+  if load_file.endswith(bcsuffix):
+    load_file = load_file[:-len(bcsuffix)]
     mode = 'bytecode'
 
   # Create the module context information.
-  context = Context(path, reload, cascade, inplace)
+  context = Context(path, reload, cascade, inplace, cascade_id)
 
   # Create and initialize the new module.
   if not (mod and reload and inplace):
-    mod = types.ModuleType(file)
+    mod = types.ModuleType(load_file)
   mod.__file__ = fullname
   mod.__shroud__ = context
   mod.require = require
-  modules[file] = mod
+  modules[load_file] = mod
 
   # Load and execute the module code.
   try:
@@ -180,19 +207,20 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
       assert False
     exec(code, mod.__dict__)
   except BaseException:
+
     # If anything bad happened, remove the module from the global
     # module cache again. Just be nice and tolerant and allow the
     # module to have been removed already.
-    modules.pop(file, None)
+    modules.pop(load_file, None)
     raise
 
   # Write the bytecode cache, but don't be cocky if it doesn't work.
   if not sys.dont_write_bytecode:
-    cache_dirname = os.path.dirname(file)
+    cache_dirname = os.path.dirname(load_file)
     try:
       if not os.path.isdir(cache_dirname):
         os.makedirs(cache_dirname)
-      with open(file + bcsuffix, 'wb') as fp:
+      with open(load_file + bcsuffix, 'wb') as fp:
         marshal.dump(code, fp)
     except (OSError, IOError):
       pass
