@@ -98,7 +98,9 @@ def require(path, directory=None, reload=False, cascade=False, inplace=False):
 
   # Automatically append the .py suffix or load __init__.py if the path
   # points to a directory.
-  if os.path.isdir(path):
+  if os.path.isfile(path):
+    pass  # use as-us
+  elif os.path.isdir(path):
     path = os.path.join(path, '__init__.py')
   elif not path.endswith('.py'):
     path += '.py'
