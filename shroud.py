@@ -153,13 +153,10 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
 
   # If no local directory was supplied, use the calling script's parent
   # directory to load relative modules from.
-  if not directory:
+  if not directory and '__file__' in frame:
     # Determine the directory to load the module from the callers
     # global __file__ variable.
-    caller_file = frame.get('__file__')
-    if not caller_file:
-      raise RuntimeError('require() caller must provide __file__ variable')
-    directory = os.path.abspath(os.path.dirname(caller_file))
+    directory = os.path.abspath(os.path.dirname(frame['__file__']))
 
   # If we're in a cascading reload, we have to allocate a new ID.
   cascade_id = context.cascade_id if context else None
@@ -245,6 +242,8 @@ def _get_best_candidate(file, main_dir, search_path):
 
     # Check special cases: local path or full path, only one test.
     if file.startswith(os.curdir):
+      if main_dir is None:
+        return None
       quit = True
       curr = os.path.abspath(os.path.normpath(os.path.join(main_dir, curr)))
     elif os.path.isabs(curr):
