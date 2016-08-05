@@ -18,20 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 """
-Shroud allows you to load Python modules in a `require()` style.
+Shroud allows you to load Python modules in a ``require()`` style.
 
-.. code-block:: python
+.. code:: python
 
-  from shroud import require, RequireError
-  status = require('lib/status')
-  try:
-    quo = require('lib/quo')
-  except RequireError:
-    print("lib/quo could not be loaded")
+    from shroud import require
+    status = require('lib/status')
+    status.yell()
 
-This is particularly useful in Python applications with a plugin architecture
-and solves potential problems when using traditional Python modules that can
-easily result into dependency conflicts.
+This is particularly useful in Python applications with a plugin
+architecture and solves potential problems when using traditional Python
+modules that can easily result in dependency conflicts.
 """
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
@@ -55,7 +52,7 @@ class RequireError(ImportError):
   """
 
 
-def require(path, directory=None):
+def require(path, directory=None, reload=False, cascade=False):
   """
   Loads a Python module by filename. Can fall back to bytecode cache file
   if available and writes them if ``sys.dont_write_bytecode`` is not enabled.
@@ -63,15 +60,26 @@ def require(path, directory=None):
   will be the path to the Python source file (even for cache files and even
   if the source file does not exist).
 
-  :param: The path to the Python module. If it contains the ``.py`` suffix,
-    the Python module must but a file, otherwise it can also be a directory
-    of which the ``__init__.py`` file is loaded.
+  :param path: The path to the Python module. If it contains the ``.py``,
+    suffix the Python module must but a file, otherwise it can also be a
+    directory of which the ``__init__.py`` file is loaded.
   :param directory: The directory to consider *path* relative to. If omitted,
     it will be read from the calling stackframe's globals.
+  :param reload: If this parameter is True, the module will be reloaded if
+    it was already loaded.
+  :param cascade: If this parameter and *reload* is True, the reload will
+    be cascaded to subsequent :func:`require` calls inside the module that
+    is being reloaded (ultimately reloading everything). During a cascade
+    reload, these parameters have no effect even when passed explicitly.
   :return: :class:`types.ModuleType`
   """
 
   frame = sys._getframe(1).f_globals
+  parent_info = frame.get('__shroud__', None)
+  if isinstance(parent_info, dict) and parent_info.get('cascade-reload'):
+    reload = True
+    cascade = True
+
   if not directory:
     # Determine the directory to load the module from the callers
     # global __file__ variable.
@@ -93,7 +101,7 @@ def require(path, directory=None):
 
   # Check if we already loaded this module and return it preemptively.
   mod = modules.get(path)
-  if mod:
+  if mod and not reload:
     return mod
 
   # The filename and file type that we're ultimately going to load
@@ -120,6 +128,7 @@ def require(path, directory=None):
   # Create and initialize the new module.
   mod = types.ModuleType(path)
   mod.__file__ = filename
+  mod.__shroud__ = {'cascade-reload': bool(reload and cascade)}
   mod.require = require
   modules[path] = mod
 
