@@ -113,6 +113,7 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
 
   `c@x-y` is the suffix of bytecode files for the current Python version.
 
+
   __Parameters__
 
   :param file: The name of the Python module to load.
@@ -126,7 +127,9 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
     reload.
   :param inplace: If *reload* is True, modules will be reloaded in-place
     instead of creating a new module object.
-  :return: A :class:`types.ModuleType` object
+  :return: A :class:`types.ModuleType` object, unless the module has a
+    member called `exports`, in which case the value of this member will be
+    returned.
   :raise RequireError: If the module could not be found or loaded.
   """
 
@@ -171,11 +174,11 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
   # Check if we already loaded this module and return it preemptively.
   mod = modules.get(load_file)
   if mod and not reload:
-    return mod
+    return _get_exports(mod)
   if mod and reload and cascade:
     # Check if we're in the same cascading load process.
     if mod.__shroud__.cascade_id == _global_cascade_id:
-      return mod
+      return _get_exports(mod)
 
   # The filename and file type that we're ultimately going to load
   # depends on the availability of the cache.
@@ -226,7 +229,7 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
     except (OSError, IOError):
       pass
 
-  return mod
+  return _get_exports(mod)
 
 
 def _get_best_candidate(file, main_dir, search_path):
@@ -301,6 +304,17 @@ def _getmtime_or_none(filename):
     if exc.errno == errno.ENOENT:
       return None
     raise
+
+
+def _get_exports(mod):
+  """
+  Helper function that either returns *mod* or ``mod.exports`` if the
+  object has that attribute.
+  """
+
+  if hasattr(mod, 'exports'):
+    return mod.exports
+  return mod
 
 
 def _unix_to_ospath(path):

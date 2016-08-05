@@ -69,7 +69,8 @@ easily result in dependency conflicts.
 >
 > __Return__
 >
-> A `types.ModuleType` object
+> A :class:`types.ModuleType` object, unless the module has a member called
+> `exports`, in which case the value of this member will be returned.
 >
 > __Raises__
 >
