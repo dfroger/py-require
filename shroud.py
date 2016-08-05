@@ -35,7 +35,7 @@ easily result into dependency conflicts.
 """
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '0.1.dev'
+__version__ = '0.1'
 
 import errno
 import marshal
