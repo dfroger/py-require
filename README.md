@@ -20,21 +20,53 @@ easily result in dependency conflicts.
 
 #### `shroud.modules`
 
-A dictionary like `sys.modules` that caches the modules that have already
-been loaded with `require()`. The keys in this dictionary are the absolute
-paths to the Python source files of the modules.
+> This dictionary maps absolute filenames to the Python modules that are
+> loaded by `require()`.
+
+#### `shroud.path`
+
+> A list of global search directories that will always be taken into account
+> when using `require()`.
 
 #### `shroud.require(file, directory=None, path=(), reload=False, cascade=False, inplace=False)`
 
-Loads a Python module by filename. Can fall back to bytecode cache file
-if available and writes them if `sys.dont_write_bytecode` is not enabled.
-For modules loaded with `require()`, the `__name__` global variable
-will be the path to the Python source file (even for cache files and even
-if the source file does not exist).
-
-If the *file* string starts with curdir (`./`), it will only be loaded from
-the script that calls `require()`, otherwise it will only be searched in
-the list of additional directories specified with *path*.
+> Loads a Python module by filename. If *file* is a relative path starting
+> with `./`, it will be loaded relative to *directory*. Otherwise, if it
+> is not an absolute path, it will be searched in the search *path*. Note
+> that *file* should be a UNIX-style path on every platform.
+>
+> The algorithm will check the following forms of *file*:
+>
+> - `<file>`
+> - `<file>c@x-y`
+> - `<file>/__init__.py`
+> - `<file>/__init__.pyc@x-y`
+> - `<file>.py`
+> - `<file>.pyc@x-y`
+>
+> `c@x-y` is the suffix of bytecode files for the current Python version.
+>
+> __Parameters__
+>
+> *file* &ndash; The name of the Python module to load.  
+> *directory* &ndash; The directory to load a local module from. If omitted,
+>   will be determined automatically from the caller's global scope using
+>   `sys._getframe()`.  
+> *path* &ndash; A list of additional search paths to search for relative
+>   modules. This path is considered before `shroud.path`.  
+> *reload* &ndash; True to force reload the module.  
+> *cascade* &ndash; If *reload* is True, passing True causes a cascade
+>   reload.  
+> *inplace* &ndash; If *reload* is True, modules will be reloaded in-place
+>   instead of creating a new module object.
+>
+> __Return__
+>
+> A `types.ModuleType` object
+>
+> __Raises__
+>
+> *RequireError* &ndash; If the module could not be found or loaded.
 
 ## License
 

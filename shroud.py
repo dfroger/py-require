@@ -42,9 +42,9 @@ import types
 import sys
 
 #: The suffix that is appended to bytecode files.
-bcsuffix = 'c@' + sys.version[:3]
+bcsuffix = 'c@' + sys.version[:3].replace('.', '-')
 
-#: This dictionary maps absolute filenames to the Python module
+#: This dictionary maps absolute filenames to the Python modules
 #: that are loaded by :func:`require`.
 modules = {}
 
@@ -83,30 +83,37 @@ class Context(object):
 
 def require(file, directory=None, path=(), reload=False, cascade=False, inplace=False):
   """
-  Loads a Python module by filename. Can fall back to bytecode cache file
-  if available and writes them if ``sys.dont_write_bytecode`` is not enabled.
-  For modules loaded with :func:`require`, the ``__name__`` global variable
-  will be the path to the Python source file (even for cache files and even
-  if the source file does not exist).
+  Loads a Python module by filename. If *file* is a relative path starting
+  with `./`, it will be loaded relative to *directory*. Otherwise, if it
+  is not an absolute path, it will be searched in the search *path*. Note
+  that *file* should be a UNIX-style path on every platform.
 
-  :param file: The path to the Python module. If it contains the ``.py``,
-    suffix the Python module must but a file, otherwise it can also be a
-    directory of which the ``__init__.py`` file is loaded.
-  :param directory: The directory to consider *file* relative to. If omitted,
-    it will be read from the calling stackframe's globals.
-  :param path: A list of secondary search directories to look out for the
-    Python module required with the *file* parameter. Subsequent calls from
-    inside the module will inherit this parameter.
-  :param reload: If this parameter is True, the module will be reloaded if
-    it was already loaded.
-  :param cascade: If this parameter and *reload* is True, the reload will
-    be cascaded to subsequent :func:`require` calls inside the module that
-    is being reloaded (ultimately reloading everything). During a cascade
-    reload, these parameters have no effect even when passed explicitly.
-  :param inplace: If this parameter is True in combination with *reload*,
-    the module will be reloaded in-place instead of creating a new module
-    object.
-  :return: :class:`types.ModuleType`
+  The algorithm will check the following forms of *file*:
+
+  - `<file>`
+  - `<file>c@x-y`
+  - `<file>/__init__.py`
+  - `<file>/__init__.pyc@x-y`
+  - `<file>.py`
+  - `<file>.pyc@x-y`
+
+  `c@x-y` is the suffix of bytecode files for the current Python version.
+
+  __Parameters__
+
+  :param file: The name of the Python module to load.
+  :param directory: The directory to load a local module from. If omitted,
+    will be determined automatically from the caller's global scope using
+    :func:`sys._getframe`.
+  :param path: A list of additional search paths to search for relative
+    modules. This path is considered before `shroud.path`.
+  :param reload: True to force reload the module.
+  :param cascade: If *reload* is True, passing True causes a cascade
+    reload.
+  :param inplace: If *reload* is True, modules will be reloaded in-place
+    instead of creating a new module object.
+  :return: A :class:`types.ModuleType` object
+  :raise RequireError: If the module could not be found or loaded.
   """
 
   ofile = file
