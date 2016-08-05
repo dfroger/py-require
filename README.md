@@ -24,7 +24,7 @@ A dictionary like `sys.modules` that caches the modules that have already
 been loaded with `require()`. The keys in this dictionary are the absolute
 paths to the Python source files of the modules.
 
-#### `shroud.require(path, directory=None, reload=False, cascade=False)`
+#### `shroud.require(path, directory=None, reload=False, cascade=False, inplace=False)`
 
 Loads a Python module by filename. Can fall back to bytecode cache file
 if available and writes them if `sys.dont_write_bytecode` is not enabled.

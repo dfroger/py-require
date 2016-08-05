@@ -52,7 +52,7 @@ class RequireError(ImportError):
   """
 
 
-def require(path, directory=None, reload=False, cascade=False):
+def require(path, directory=None, reload=False, cascade=False, inplace=False):
   """
   Loads a Python module by filename. Can fall back to bytecode cache file
   if available and writes them if ``sys.dont_write_bytecode`` is not enabled.
@@ -71,6 +71,9 @@ def require(path, directory=None, reload=False, cascade=False):
     be cascaded to subsequent :func:`require` calls inside the module that
     is being reloaded (ultimately reloading everything). During a cascade
     reload, these parameters have no effect even when passed explicitly.
+  :param inplace: If this parameter is True in combination with *reload*,
+    the module will be reloaded in-place instead of creating a new module
+    object.
   :return: :class:`types.ModuleType`
   """
 
@@ -79,6 +82,7 @@ def require(path, directory=None, reload=False, cascade=False):
   if isinstance(parent_info, dict) and parent_info.get('cascade-reload'):
     reload = True
     cascade = True
+    inplace = bool(parent_info.get('reload-inplace'))
 
   if not directory:
     # Determine the directory to load the module from the callers
@@ -126,9 +130,10 @@ def require(path, directory=None, reload=False, cascade=False):
     mode = 'bytecode'
 
   # Create and initialize the new module.
-  mod = types.ModuleType(path)
+  if not (mod and reload and inplace):
+    mod = types.ModuleType(path)
   mod.__file__ = filename
-  mod.__shroud__ = {'cascade-reload': bool(reload and cascade)}
+  mod.__shroud__ = {'cascade-reload': bool(reload and cascade), 'reload-inplace': inplace}
   mod.require = require
   modules[path] = mod
 
