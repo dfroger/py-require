@@ -196,11 +196,22 @@ def _get_best_candidate(file, main_dir, path):
   """
 
   for dirname in itertools.chain([main_dir], path):
+    quit = False
     curr = file
-    if not os.path.isabs(curr):
+
+    # Check special cases: local path or full path, only one test.
+    if file.startswith(os.curdir):
+      quit = True
+      curr = os.path.abspath(os.path.normpath(os.path.join(main_dir, curr)))
+    elif os.path.isabs(curr):
+      quit = True
+    elif dirname == main_dir:
+      # Otherwise skip checking the main_dir.
+      continue
+    else:
       curr = os.path.abspath(os.path.join(dirname, curr))
 
-
+    # Test file choices: as-is, as-bytecode, as __init__.py, -as-bytecode
     if os.path.isfile(curr):
       return curr
     elif os.path.isfile(curr + bcsuffix):
@@ -212,7 +223,7 @@ def _get_best_candidate(file, main_dir, path):
       if os.path.isfile(temp):
         return temp
 
-    if os.path.isabs(file):
+    if quit:
       break  # We don't need to do this again if the file is absolute
 
   if not file.endswith('.py'):
