@@ -38,6 +38,7 @@ import errno
 import itertools
 import marshal
 import os
+import posixpath
 import types
 import sys
 
@@ -115,6 +116,10 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
   :return: A :class:`types.ModuleType` object
   :raise RequireError: If the module could not be found or loaded.
   """
+
+  # file must be a UNIX-style path always. Convert it to the current
+  # filesystem's format.
+  file = _unix_to_ospath(file)
 
   ofile = file
   frame = sys._getframe(1).f_globals
@@ -265,6 +270,14 @@ def _getmtime_or_none(filename):
     if exc.errno == errno.ENOENT:
       return None
     raise
+
+
+def _unix_to_ospath(path):
+  parts = path.split(posixpath.sep)
+  parts = [posixpath.curdir if x == os.curdir else
+           posixpath.pardir if x == os.pardir else x
+           for x in parts]
+  return os.sep.join(parts)
 
 
 __all__ = ['require', 'RequireError']
