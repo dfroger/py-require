@@ -59,6 +59,9 @@ def require(path, directory=None):
   """
   Loads a Python module by filename. Can fall back to bytecode cache file
   if available and writes them if ``sys.dont_write_bytecode`` is not enabled.
+  For modules loaded with :func:`require`, the ``__name__`` global variable
+  will be the path to the Python source file (even for cache files and even
+  if the source file does not exist).
 
   :param: The path to the Python module. If it contains the ``.py`` suffix,
     the Python module must but a file, otherwise it can also be a directory
@@ -72,7 +75,7 @@ def require(path, directory=None):
   if not directory:
     # Determine the directory to load the module from the callers
     # global __file__ variable.
-    caller_file = frame.get('__shroud_source__') or frame.get('__file__')
+    caller_file = frame.get('__file__')
     if not caller_file:
       raise RuntimeError('require() caller must provide __file__ variable')
     directory = os.path.abspath(os.path.dirname(caller_file))
@@ -117,7 +120,6 @@ def require(path, directory=None):
   # Create and initialize the new module.
   mod = types.ModuleType(path)
   mod.__file__ = filename
-  mod.__shroud_source__ = path              # Used to determine the correct parent directory on subsequent require() calls
   mod.require = require
   modules[path] = mod
 
