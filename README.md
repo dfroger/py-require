@@ -3,17 +3,18 @@
 Shroud allows you to load Python modules in a `require()` style.
 
 ```python
-from shroud import require, RequireError
+from shroud import require
 status = require('lib/status')
-try:
-  quo = require('lib/quo')
-except RequireError:
-  print("lib/quo could not be loaded")
+status.yell()
 ```
 
 This is particularly useful in Python applications with a plugin architecture
 and solves potential problems when using traditional Python modules that can
-easily result into dependency conflicts.
+easily result in dependency conflicts.
+
+## Installation
+
+    pip install shroud-require
 
 ## License
 
