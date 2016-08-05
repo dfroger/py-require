@@ -15,7 +15,7 @@ def restify():
 
 setup(
   name = "shroud-require",
-  version = "0.4",
+  version = "0.5",
   description = "Shroud allows you to load Python modules in a `require()` style.",
   long_description = restify(),
   author = "Niklas Rosenstein",
