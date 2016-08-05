@@ -32,7 +32,7 @@ modules that can easily result in dependency conflicts.
 """
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '0.3'
+__version__ = '0.4'
 
 import errno
 import itertools
