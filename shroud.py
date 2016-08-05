@@ -49,6 +49,10 @@ bcsuffix = 'c@' + sys.version[:3].replace('.', '-')
 #: that are loaded by :func:`require`.
 modules = {}
 
+#: A list of global search directories that will always be taken into
+#: account when using :func:`require`.
+path = ['.']
+
 #: This is a private value that is incremented with each cascade reload
 #: to avoid cyclic dependencies resulting in infinite recursion.
 _global_cascade_id = 0
@@ -228,14 +232,14 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
   return mod
 
 
-def _get_best_candidate(file, main_dir, path):
+def _get_best_candidate(file, main_dir, search_path):
   """
   Finds the best candidate that we can load for the specified *file*
   parameter. The returned string can contain or not contain the bytecode
   suffix :data:`bcsuffix`.
   """
 
-  for dirname in itertools.chain([main_dir], path):
+  for dirname in itertools.chain([main_dir], path, search_path):
     quit = False
     curr = file
 
