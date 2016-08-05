@@ -16,6 +16,13 @@ easily result in dependency conflicts.
 
     pip install shroud-require
 
+## Known Issues
+
+- In Python 2, no statement must be on the first line of the file. This is
+  due to the fact that shroud prepends the text `from __future__ import absolute_import;`
+  in the first first line to avoid RuntimeWarnings when import other modules
+  using Pythons standard `import` mechanism.
+
 ## API
 
 #### `shroud.modules`
