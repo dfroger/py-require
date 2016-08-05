@@ -4,7 +4,7 @@ Shroud allows you to load Python modules in a `require()` style.
 
 ```python
 from shroud import require
-status = require('lib/status')
+status = require('./lib/status')
 status.yell()
 ```
 
@@ -24,13 +24,17 @@ A dictionary like `sys.modules` that caches the modules that have already
 been loaded with `require()`. The keys in this dictionary are the absolute
 paths to the Python source files of the modules.
 
-#### `shroud.require(path, directory=None, reload=False, cascade=False, inplace=False)`
+#### `shroud.require(file, directory=None, path=(), reload=False, cascade=False, inplace=False)`
 
 Loads a Python module by filename. Can fall back to bytecode cache file
 if available and writes them if `sys.dont_write_bytecode` is not enabled.
 For modules loaded with `require()`, the `__name__` global variable
 will be the path to the Python source file (even for cache files and even
 if the source file does not exist).
+
+If the *file* string starts with curdir (`./`), it will only be loaded from
+the script that calls `require()`, otherwise it will only be searched in
+the list of additional directories specified with *path*.
 
 ## License
 

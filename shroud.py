@@ -23,7 +23,7 @@ Shroud allows you to load Python modules in a ``require()`` style.
 .. code:: python
 
     from shroud import require
-    status = require('lib/status')
+    status = require('./lib/status')
     status.yell()
 
 This is particularly useful in Python applications with a plugin
