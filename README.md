@@ -1,7 +1,8 @@
 # require() for Python
 
-This Python module provides a new (unpythonic) approach to loading Python
-modules and is completely decoupled from the Python import mechanism.
+This Python module provides a new approach to loading Python modules
+similar to Node's `require()` that is  decoupled from the Python import
+mechanism.
 
 ```python
 import require
@@ -70,7 +71,7 @@ easily result in dependency conflicts.
 >
 > __Return__
 >
-> A :class:`types.ModuleType` object, unless the module has a member called
+> A `types.ModuleType` object, unless the module has a member called
 > `exports`, in which case the value of this member will be returned.
 >
 > __Raises__
