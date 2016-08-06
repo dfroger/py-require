@@ -36,6 +36,7 @@ __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
 __version__ = '0.9'
 
 import errno
+import functools
 import itertools
 import marshal
 import os
@@ -64,6 +65,8 @@ class RequireError(ImportError):
   A subclass of :class:`ImportError` that will be raised if :func:`require`
   is unable to find or load a Python module.
   """
+
+error = RequireError
 
 
 class Context(object):
@@ -339,19 +342,18 @@ def _unix_to_ospath(path):
   return os.sep.join(parts)
 
 
-# Export all symbols into the require() functions attributes.
-require.__version__ = __version__
-require.__author__ = __author__
-require.__file__ = __file__
-require.bcsuffix = bcsuffix
-require.modules = modules
-require.path = path
-require.error = RequireError
-require.RequireError = RequireError
-require.require = require
+class _require_module_type(types.ModuleType):
+  " Wrapper for the ``module`` object to make it callable. "
 
-if __name__ == "require":
-  # Replace the module in the global module cache with the require() function
-  # so we can get the function when doing a plain "import require".
-  require.__module_object__ = sys.modules["require"]  # important to keep
-  sys.modules["require"] = require
+  def __init__(self, original_module):
+    for key, value in vars(original_module).items():
+      setattr(self, key, value)
+    self.__original__ = original_module
+
+  @functools.wraps(require)
+  def __call__(self, *args, **kwargs):
+    return self.require(*args, **kwargs)
+
+
+if __name__ in sys.modules:
+  sys.modules[__name__] = _require_module_type(sys.modules[__name__])

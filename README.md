@@ -57,18 +57,18 @@ easily result in dependency conflicts.
 >
 > __Parameters__
 >
-> *file* &ndash; The name of the Python module to load.  
-> *directory* &ndash; The directory to load a local module from. If omitted,
+> - *file* &ndash; The name of the Python module to load.  
+> - *directory* &ndash; The directory to load a local module from. If omitted,
 >   will be determined automatically from the caller's global scope using
 >   `sys._getframe()`.  
-> *path* &ndash; A list of additional search paths to search for relative
->   modules. This path is considered before `require.path`.  
-> *reload* &ndash; True to force reload the module.  
-> *cascade* &ndash; If *reload* is True, passing True causes a cascade
+> - *path* &ndash; A list of additional search paths when loading other
+>   modules with `require()`. Subsequent loads inherit this search path.
+> - *reload* &ndash; True to force reload the module.  
+> - *cascade* &ndash; If *reload* is True, passing True causes a cascade
 >   reload.  
-> *inplace* &ndash; If *reload* is True, modules will be reloaded in-place
+> - *inplace* &ndash; If *reload* is True, modules will be reloaded in-place
 >   instead of creating a new module object.
-> *get_exports* &ndash; Return the `exports` member of the module if there
+> - *get_exports* &ndash; Return the `exports` member of the module if there
 >   is any. False can be passed to always get the actual module object. Can
 >   also be callable that is passed the module object. The result of this
 >   callable is returned.
@@ -83,6 +83,19 @@ easily result in dependency conflicts.
 > *RequireError* &ndash; If the module could not be found or loaded.
 
 ## Changelog
+
+#### v0.10
+
+- fix #9 &ndash; `require` module is now a custom `types.ModuleType` instance
+  that implements `__call__()`
+
+#### v0.9
+
+- add `require(get_exports)` parameter
+
+#### v0.8
+
+- removed `'.'` path from default value of `require.path`
 
 #### v0.7
 
