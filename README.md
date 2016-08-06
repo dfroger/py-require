@@ -1,9 +1,10 @@
-# Shroud
+# require() for Python
 
-Shroud allows you to load Python modules in a `require()` style.
+This Python module provides a new (unpythonic) approach to loading Python
+modules and is completely decoupled from the Python import mechanism.
 
 ```python
-from shroud import require
+import require
 status = require('./lib/status')
 status.yell()
 ```
@@ -14,28 +15,28 @@ easily result in dependency conflicts.
 
 ## Installation
 
-    pip install shroud-require
+    pip install py-require
 
 ## Known Issues
 
 - In Python 2, no statement must be on the first line of the file. This is
-  due to the fact that shroud prepends the text `from __future__ import absolute_import;`
+  due to the fact that require prepends the text `from __future__ import absolute_import;`
   in the first first line to avoid RuntimeWarnings when import other modules
   using Pythons standard `import` mechanism.
 
 ## API
 
-#### `shroud.modules`
+#### `require.modules`
 
 > This dictionary maps absolute filenames to the Python modules that are
 > loaded by `require()`.
 
-#### `shroud.path`
+#### `require.path`
 
 > A list of global search directories that will always be taken into account
 > when using `require()`.
 
-#### `shroud.require(file, directory=None, path=(), reload=False, cascade=False, inplace=False)`
+#### `require(file, directory=None, path=(), reload=False, cascade=False, inplace=False)`
 
 > Loads a Python module by filename. If *file* is a relative path starting
 > with `./`, it will be loaded relative to *directory*. Otherwise, if it
@@ -60,7 +61,7 @@ easily result in dependency conflicts.
 >   will be determined automatically from the caller's global scope using
 >   `sys._getframe()`.  
 > *path* &ndash; A list of additional search paths to search for relative
->   modules. This path is considered before `shroud.path`.  
+>   modules. This path is considered before `require.path`.  
 > *reload* &ndash; True to force reload the module.  
 > *cascade* &ndash; If *reload* is True, passing True causes a cascade
 >   reload.  
@@ -75,6 +76,16 @@ easily result in dependency conflicts.
 > __Raises__
 >
 > *RequireError* &ndash; If the module could not be found or loaded.
+
+## Changelog
+
+#### v0.7
+
+- rename module to `require` from `shroud`
+- `sys.module` hook to allow calling `require` as a module instead of
+  having to use `from require import require`
+- directory to load local modules from (`./`) now falls back to the
+  current working directory
 
 ## License
 

@@ -14,14 +14,14 @@ def restify():
     return fp.read()
 
 setup(
-  name = "shroud-require",
+  name = "py-require",
   version = "0.6",
-  description = "Shroud allows you to load Python modules in a `require()` style.",
+  description = "require() for Python",
   long_description = restify(),
   author = "Niklas Rosenstein",
   author_email = "rosensteinniklas@gmail.com",
-  url = "https://github.com/NiklasRosenstein/py-shroud",
-  py_modules = ['shroud'],
+  url = "https://github.com/NiklasRosenstein/py-require",
+  py_modules = ['require'],
   keywords = ['require', 'importer', 'loader'],
   classifiers = [
     'Development Status :: 4 - Beta',

@@ -18,17 +18,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 """
-Shroud allows you to load Python modules in a ``require()`` style.
+This Python module provides a new (unpythonic) approach to loading Python
+modules and is completely decoupled from the Python import mechanism.
 
 .. code:: python
 
-    from shroud import require
-    status = require('./lib/status')
-    status.yell()
+  import require
+  status = require('./lib/status')
+  status.yell()
 
-This is particularly useful in Python applications with a plugin
-architecture and solves potential problems when using traditional Python
-modules that can easily result in dependency conflicts.
+This is particularly useful in Python applications with a plugin architecture
+and solves potential problems when using traditional Python modules that can
+easily result in dependency conflicts.
 """
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
@@ -91,7 +92,7 @@ class Context(object):
     self.cascade_id = cascade_id
 
   def __repr__(self):
-    return 'shroud.Context(%r, %r, %r, %r)' % (
+    return 'Context(%r, %r, %r, %r)' % (
       self.path, self.cascade_reload, self.reload_inplace, self.cascade_id)
 
 
@@ -121,7 +122,7 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
     will be determined automatically from the caller's global scope using
     :func:`sys._getframe`.
   :param path: A list of additional search paths to search for relative
-    modules. This path is considered before `shroud.path`.
+    modules. This path is considered before `require.path`.
   :param reload: True to force reload the module.
   :param cascade: If *reload* is True, passing True causes a cascade
     reload.
@@ -145,7 +146,7 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
 
   # Read the context information from the caller.
   frame = sys._getframe(1).f_globals
-  context = frame.get('__shroud__', None)
+  context = frame.get('__require_context__', None)
   if isinstance(context, Context) and context.cascade_reload:
     reload = True
     cascade = True
@@ -160,6 +161,8 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
     # Determine the directory to load the module from the callers
     # global __file__ variable.
     directory = os.path.abspath(os.path.dirname(frame['__file__']))
+  elif not directory:
+    directory = os.getcwd()
 
   # If we're in a cascading reload, we have to allocate a new ID.
   cascade_id = context.cascade_id if context else None
@@ -177,7 +180,7 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
     return _get_exports(mod)
   if mod and reload and cascade:
     # Check if we're in the same cascading load process.
-    if mod.__shroud__.cascade_id == _global_cascade_id:
+    if mod.__require_context__.cascade_id == _global_cascade_id:
       return _get_exports(mod)
 
   # The filename and file type that we're ultimately going to load
@@ -195,7 +198,7 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
   if not (mod and reload and inplace):
     mod = types.ModuleType(load_file)
   mod.__file__ = fullname
-  mod.__shroud__ = context
+  mod.__require_context__ = context
   mod.require = require
   modules[load_file] = mod
 
@@ -325,10 +328,19 @@ def _unix_to_ospath(path):
   return os.sep.join(parts)
 
 
-__all__ = ['require', 'RequireError']
+# Export all symbols into the require() functions attributes.
+require.__version__ = __version__
+require.__author__ = __author__
+require.__file__ = __file__
+require.bcsuffix = bcsuffix
+require.modules = modules
+require.path = path
+require.error = RequireError
+require.RequireError = RequireError
+require.require = require
 
-
-if __name__ == "__main__":
-  # Fill in the shroud module to avoid it being imported (again)
-  # which can cause modules to be loaded two times.
-  sys.modules['shroud'] = sys.modules[__name__]
+if __name__ == "require":
+  # Replace the module in the global module cache with the require() function
+  # so we can get the function when doing a plain "import require".
+  require.__module_object__ = sys.modules["require"]  # important to keep
+  sys.modules["require"] = require
