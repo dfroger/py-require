@@ -37,7 +37,7 @@ easily result in dependency conflicts.
 > A list of global search directories that will always be taken into account
 > when using `require()`.
 
-#### `require(file, directory=None, path=(), reload=False, cascade=False, inplace=False)`
+#### `require(file, directory=None, path=(), reload=False, cascade=False, inplace=False, get_exports=True)`
 
 > Loads a Python module by filename. If *file* is a relative path starting
 > with `./`, it will be loaded relative to *directory*. Otherwise, if it
@@ -68,6 +68,10 @@ easily result in dependency conflicts.
 >   reload.  
 > *inplace* &ndash; If *reload* is True, modules will be reloaded in-place
 >   instead of creating a new module object.
+> *get_exports* &ndash; Return the `exports` member of the module if there
+>   is any. False can be passed to always get the actual module object. Can
+>   also be callable that is passed the module object. The result of this
+>   callable is returned.
 >
 > __Return__
 >

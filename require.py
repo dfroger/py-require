@@ -96,7 +96,7 @@ class Context(object):
       self.path, self.cascade_reload, self.reload_inplace, self.cascade_id)
 
 
-def require(file, directory=None, path=(), reload=False, cascade=False, inplace=False):
+def require(file, directory=None, path=(), reload=False, cascade=False, inplace=False, get_exports=True):
   """
   Loads a Python module by filename. If *file* is a relative path starting
   with `./`, it will be loaded relative to *directory*. Otherwise, if it
@@ -128,6 +128,10 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
     reload.
   :param inplace: If *reload* is True, modules will be reloaded in-place
     instead of creating a new module object.
+  :param get_exports: Return the `exports` member of the module if there
+    is any. False can be passed to always get the actual module object. Can
+    also be callable that is passed the module object. The result of this
+    callable is returned.
   :return: A :class:`types.ModuleType` object, unless the module has a
     member called `exports`, in which case the value of this member will be
     returned.
@@ -135,6 +139,13 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
   """
 
   global _global_cascade_id
+
+  if get_exports is True:
+    get_exports = _get_exports
+  elif get_exports is False:
+    get_exports = lambda mod: mod
+  elif not callable(get_exports):
+    raise TypeError("get_exports must be callable, True or False")
 
   # Increase the cascade ID if cascading is requested explicitly.
   if reload and cascade:
@@ -177,11 +188,11 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
   # Check if we already loaded this module and return it preemptively.
   mod = modules.get(load_file)
   if mod and not reload:
-    return _get_exports(mod)
+    return get_exports(mod)
   if mod and reload and cascade:
     # Check if we're in the same cascading load process.
     if mod.__require_context__.cascade_id == _global_cascade_id:
-      return _get_exports(mod)
+      return get_exports(mod)
 
   # The filename and file type that we're ultimately going to load
   # depends on the availability of the cache.
@@ -232,7 +243,7 @@ def require(file, directory=None, path=(), reload=False, cascade=False, inplace=
     except (OSError, IOError):
       pass
 
-  return _get_exports(mod)
+  return get_exports(mod)
 
 
 def _get_best_candidate(file, main_dir, search_path):
