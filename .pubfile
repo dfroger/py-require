@@ -1,0 +1,3 @@
+update_version:
+  "setup.py": 'version = "$VERSION"'
+  "require.py": "__version__ = '$VERSION'"
