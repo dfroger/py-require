@@ -52,7 +52,7 @@ modules = {}
 
 #: A list of global search directories that will always be taken into
 #: account when using :func:`require`.
-path = ['.']
+path = []
 
 #: This is a private value that is incremented with each cascade reload
 #: to avoid cyclic dependencies resulting in infinite recursion.
