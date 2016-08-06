@@ -33,7 +33,7 @@ easily result in dependency conflicts.
 """
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '0.7'
+__version__ = '0.8'
 
 import errno
 import itertools
