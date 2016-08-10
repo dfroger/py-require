@@ -27,16 +27,6 @@ easily result in dependency conflicts.
 
 ## API
 
-#### `require.modules`
-
-> This dictionary maps absolute filenames to the Python modules that are
-> loaded by `require()`.
-
-#### `require.path`
-
-> A list of global search directories that will always be taken into account
-> when using `require()`.
-
 #### `require(file, directory=None, path=(), reload=False, cascade=False, inplace=False, get_exports=True)`
 
 > Loads a Python module by filename. If *file* is a relative path starting
@@ -54,21 +44,22 @@ easily result in dependency conflicts.
 > - `<file>.pyc@x-y`
 >
 > `c@x-y` is the suffix of bytecode files for the current Python version.
+> If *file* is the string `'.'`, it will be translated to `'./__init__.py'`.
 >
 > __Parameters__
 >
-> - *file* &ndash; The name of the Python module to load.  
-> - *directory* &ndash; The directory to load a local module from. If omitted,
+> - *file* -- The name of the Python module to load.  
+> - *directory* -- The directory to load a local module from. If omitted,
 >   will be determined automatically from the caller's global scope using
 >   `sys._getframe()`.  
-> - *path* &ndash; A list of additional search paths when loading other
+> - *path* -- A list of additional search paths when loading other
 >   modules with `require()`. Subsequent loads inherit this search path.
-> - *reload* &ndash; True to force reload the module.  
-> - *cascade* &ndash; If *reload* is True, passing True causes a cascade
+> - *reload* -- True to force reload the module.  
+> - *cascade* -- If *reload* is True, passing True causes a cascade
 >   reload.  
-> - *inplace* &ndash; If *reload* is True, modules will be reloaded in-place
+> - *inplace* -- If *reload* is True, modules will be reloaded in-place
 >   instead of creating a new module object.
-> - *get_exports* &ndash; Return the `exports` member of the module if there
+> - *get_exports* -- Return the `exports` member of the module if there
 >   is any. False can be passed to always get the actual module object. Can
 >   also be callable that is passed the module object. The result of this
 >   callable is returned.
@@ -80,9 +71,36 @@ easily result in dependency conflicts.
 >
 > __Raises__
 >
-> *RequireError* &ndash; If the module could not be found or loaded.
+> `require.error` -- If the module could not be found or loaded.
+
+#### `require.new()`
+
+> Create a new `Require` object that is completely decoupled from the
+> `require` module and has the exact same API.
+>
+> ```python
+> print
+> ```
+
+#### `require.path`
+
+> A list of global search directories that will always be taken into account
+> when using `require()`.
+
+#### `require.modules`
+
+> This dictionary maps absolute filenames to the Python modules that are
+> loaded by `require()`.
+
+
 
 ## Changelog
+
+#### v0.11
+
+- rewrite, using `Require` class and cleaner code base
+- add `require.new()` (#11)
+- support for translating `'.'` to `'./__init__.py'` (#10)
 
 #### v0.10
 
