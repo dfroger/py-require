@@ -1,3 +1,3 @@
-update_version:
+versionPatterns:
   "setup.py": 'version = "$VERSION"'
   "require.py": "__version__ = '$VERSION'"
