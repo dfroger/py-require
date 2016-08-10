@@ -61,7 +61,8 @@ class Require(types.ModuleType):
     return Require(path)
 
   def require(self, file, directory=None, path=(), reload=False,
-              cascade=False, inplace=False, get_exports=True):
+              cascade=False, inplace=False, get_exports=True,
+              _stackdepth=1):
     """
     Load a Python module from the specified *file*. The loaded file
     will be executed with the ``require()`` function available so it
@@ -82,8 +83,8 @@ class Require(types.ModuleType):
     elif not callable(get_exports):
       raise TypeError("require(): get_exports must be callable, True or False")
 
-    parent_globals = sys._getframe(1).f_globals
-    parent_context = parent_globals.get('__require_module_context')
+    parent_globals = sys._getframe(_stackdepth).f_globals
+    parent_context = parent_globals.get('__require_module_context__')
     if isinstance(parent_context, RequireModuleContext):
       # Allow cascading reloads to propagate.
       if parent_context.reload and parent_context.cascade:
@@ -121,7 +122,7 @@ class Require(types.ModuleType):
       return get_exports(mod)
     if reload and cascade and mod is not None:
       # If we're still in the same cascade, don't load the module again.
-      if mod.__require_module_context.cascade_index == cascade_index:
+      if mod.__require_module_context__.cascade_index == cascade_index:
         return get_exports(mod)
 
     context = RequireModuleContext(path, reload, cascade, inplace,
@@ -130,7 +131,7 @@ class Require(types.ModuleType):
     if not (mod is not None and reload and inplace):
       mod = types.ModuleType(file_ident)
     mod.__file__ = load_file
-    mod.__require_module_context = context
+    mod.__require_module_context__ = context
     mod.require = self
     self.modules[file_ident] = mod
 
@@ -150,6 +151,7 @@ class Require(types.ModuleType):
 
   def __call__(self, *args, **kwargs):
     """ Alias for ``require()``. """
+    kwargs['_stackdepth'] = kwargs.get('_stackdepth', 1) + 1
     return self.require(*args, **kwargs)
 
   def _get_best_candidate(self, file, main_dir, search_path, parent_context):

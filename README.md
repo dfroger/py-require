@@ -79,7 +79,9 @@ easily result in dependency conflicts.
 > `require` module and has the exact same API.
 >
 > ```python
-> print
+> import require
+> require = require.new()
+> require('./hello').say_hello()
 > ```
 
 #### `require.path`
@@ -101,6 +103,9 @@ easily result in dependency conflicts.
 - rewrite, using `Require` class and cleaner code base
 - add `require.new()` (#11)
 - support for translating `'.'` to `'./__init__.py'` (#10)
+- fix bug with parent context not being inherited when calling the `require`
+  module directly instead of using `require.require()`, by introducing a new
+  *_stackdepth* parameter
 
 #### v0.10
 
