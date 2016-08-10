@@ -247,5 +247,5 @@ class Require(types.ModuleType):
 
 require = Require(_keep_alive=sys.modules.get(__name__))
 
-if __name__ in sys.modules:
+if __name__ in sys.modules and globals() is vars(sys.modules[__name__]):
   sys.modules[__name__] = require

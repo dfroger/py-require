@@ -98,6 +98,14 @@ easily result in dependency conflicts.
 
 ## Changelog
 
+#### v0.12
+
+- add global `require` member to `require.py` for cases when `sys.modules`
+  can not be patched
+- prevent `sys.modules` being patched when there is already a module named
+  `require` that is not the same object as the currently executed `require`
+  module
+
 #### v0.11
 
 - rewrite, using `Require` class and cleaner code base
