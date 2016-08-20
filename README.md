@@ -98,6 +98,11 @@ easily result in dependency conflicts.
 
 ## Changelog
 
+#### v0.13
+
+- fix NameError where old `bcsuffix` variable was used instead of
+  `Require.bytecache_suffix`
+
 #### v0.12
 
 - add global `require` member to `require.py` for cases when `sys.modules`

@@ -112,7 +112,7 @@ class Require(types.ModuleType):
     # need to remove that suffix again to get the source .py file.
     if load_file.endswith(self.bytecache_suffix):
       mode = 'bytecode'
-      file_ident = load_file[:-len(bcsuffix)]
+      file_ident = load_file[:-len(self.bytecache_suffix)]
     else:
       mode = 'source'
       file_ident = load_file
