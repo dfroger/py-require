@@ -15,7 +15,7 @@ def restify():
 
 setup(
   name = "py-require",
-  version = "0.13",
+  version = "0.14",
   description = "require() for Python",
   long_description = restify(),
   author = "Niklas Rosenstein",

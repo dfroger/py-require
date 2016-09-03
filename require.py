@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 __author__ = 'Niklas Rosenstein <rosensteinniklas(at)gmail.com>'
-__version__ = '0.13'
+__version__ = '0.14'
 
 import errno
 import itertools
