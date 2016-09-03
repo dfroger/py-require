@@ -73,14 +73,15 @@ easily result in dependency conflicts.
 >
 > `require.error` -- If the module could not be found or loaded.
 
-#### `require.new()`
+#### `require.Require(path=(), write_bytecode=None)`
 
-> Create a new `Require` object that is completely decoupled from the
-> `require` module and has the exact same API.
+> Class of the `require` module that can be instantiated to create a
+> new, decoupled require environment. You can also subclass it and
+> overwrite the `Require.find_module()` method.
 >
 > ```python
 > import require
-> require = require.new()
+> require = require.Require()
 > require('./hello').say_hello()
 > ```
 
@@ -95,8 +96,14 @@ easily result in dependency conflicts.
 > loaded by `require()`.
 
 
-
 ## Changelog
+
+#### v0.14
+
+- removed `require.new()`
+- add `Require(write_bytecode)` argument
+- add `RequireModuleContext.path_all` property
+- replace `Require._get_best_candidate()` with `Require.find_module()`
 
 #### v0.13
 

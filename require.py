@@ -42,23 +42,29 @@ class RequireModuleContext(object):
     self.cascade_index = cascade_index
     self.parent = parent
 
+  @property
+  def path_all(self):
+    result = []
+    while self:
+      result.append(self.path)
+      self = self.parent
+    return itertools.chain(*result)
+
 class Require(types.ModuleType):
 
   error = RequireError
 
-  def __init__(self, path=(), _keep_alive=None):
+  def __init__(self, path=(), write_bytecode=None, _keep_alive=None):
     super(Require, self).__init__('require')
     self.bytecache_suffix = 'c@' + sys.version[:3].replace('.', '-')
     self.modules = {}
     self.path = list(path)
     self.cascade_index = 0
+    self.write_bytecode = write_bytecode
     self._keep_alive = _keep_alive
     if _keep_alive:
+      self.Require = Require
       self.__file__ = _keep_alive.__file__
-
-  @staticmethod
-  def new(path=()):
-    return Require(path)
 
   def require(self, file, directory=None, path=(), reload=False,
               cascade=False, inplace=False, get_exports=True,
@@ -104,20 +110,20 @@ class Require(types.ModuleType):
       # A new cascade reload is started, use a new cascade index.
       cascade_index = self.cascade_index
 
-    load_file = self._get_best_candidate(file, directory, path, parent_context)
-    if not load_file:
+    search_path = itertools.chain(path, parent_context.path_all if parent_context else [])
+    module_file, real_file = self.find_module(file, directory, search_path)
+    if not module_file:
       raise self.error(file)
 
-    # The best candidate can be a bytecode version, thus we eventually
-    # need to remove that suffix again to get the source .py file.
-    if load_file.endswith(self.bytecache_suffix):
+    # If there is a "real_file" version for the file we should load,
+    # we expect the "module_file" to be a bytecache version.
+    if real_file:
       mode = 'bytecode'
-      file_ident = load_file[:-len(self.bytecache_suffix)]
     else:
       mode = 'source'
-      file_ident = load_file
+      real_file = module_file
 
-    mod = self.modules.get(file_ident)
+    mod = self.modules.get(real_file)
     if not reload and mod is not None:
       return get_exports(mod)
     if reload and cascade and mod is not None:
@@ -129,21 +135,24 @@ class Require(types.ModuleType):
       cascade_index, parent_context)
 
     if not (mod is not None and reload and inplace):
-      mod = types.ModuleType(file_ident)
-    mod.__file__ = load_file
+      mod = types.ModuleType(real_file)
+    mod.__file__ = module_file
     mod.__require_module_context__ = context
     mod.require = self
-    self.modules[file_ident] = mod
+    self.modules[real_file] = mod
 
     try:
-      code = self._exec_module(mod, load_file, mode)
+      code = self._exec_module(mod, module_file, mode)
     except BaseException:
-      self.modules.pop(load_file, None)
+      self.modules.pop(module_file, None)
       raise
 
-    if not sys.dont_write_bytecode:
+    write = self.write_bytecode
+    if write is None:
+      write = not sys.dont_write_bytecode
+    if write:
       try:
-        self._write_bytecode(code, load_file + self.bytecache_suffix)
+        self._write_bytecode(code, real_file + self.bytecache_suffix)
       except (OSError, IOError):
         pass # intentional
 
@@ -154,51 +163,60 @@ class Require(types.ModuleType):
     kwargs['_stackdepth'] = kwargs.get('_stackdepth', 1) + 1
     return self.require(*args, **kwargs)
 
-  def _get_best_candidate(self, file, main_dir, search_path, parent_context):
-    path_chain = [main_dir, self.path, search_path]
-    curr_context = parent_context
-    while curr_context:
-      path_chain.append(curr_context.path)
-      curr_context = curr_context.parent
+  def find_module(self, file, directory, path):
+    """
+    This function is called to find the actual full filename for the *file*
+    parameter to load when using :meth:`require`.
 
-    for dirname in itertools.chain(*path_chain):
-      quit = False
-      curr = file
+    :param file: The filename passed to :meth:`require`.
+    :param directory: The main directory from which relative filenames
+      should be loaded. This is either the current working directory or
+      the parent directory of the script that calls :meth:`require`.
+    :param path: An iterable (not sequence!) of the explicitly passed
+      *path* list and inherited search paths from parent :meth:`require`
+      calls.
+    :return: A tuple of ``(module_file, real_file)`` where the *module_file*
+      is the file that will actually be loaded and *real_file* is the name
+      of the file in its original source version. If there is no original
+      source version (that is, *module_file* is the source file and not a
+      bytecache version), it should be None. If the module can not be found,
+      ``(None, None)`` should be returned.
+    """
 
-      # Check special cases: local path or full path, only one test.
-      if file.startswith(os.curdir):
-        if main_dir is None:
-          return None
-        quit = True
-        curr = os.path.abspath(os.path.normpath(os.path.join(main_dir, curr)))
-      elif os.path.isabs(curr):
-        quit = True
-      elif dirname == main_dir:
-        # Otherwise skip checking the main_dir.
-        continue
+    if not isinstance(path, list):
+      path = list(path)
+
+    if file.startswith(os.curdir):
+      if directory is None:
+        return None, None
+      file = os.path.abspath(os.path.normpath(os.path.join(directory, file)))
+      check_path = [None]
+    elif os.path.isabs(file):
+      check_path = [None]
+    else:
+      check_path = path
+
+    for parent_dir in check_path:
+      if parent_dir is not None:
+        curr = os.path.join(parent_dir, file)
       else:
-        curr = os.path.abspath(os.path.join(dirname, curr))
+        curr = file
+      bytefile = curr + self.bytecache_suffix
+      if os.path.isfile(bytefile):
+        if os.path.isfile(curr):
+          # Choose the source file if its newer.
+          if os.path.getmtime(curr) > os.path.getmtime(bytefile):
+            return curr, None
+        return bytefile, curr
+      elif os.path.isfile(curr):
+        return curr, None
+      elif not curr.endswith(".py") and os.path.isdir(curr):
+        return self.find_module(os.path.join(curr, '__init__.py'), directory, path)
 
-      # Test file choices: as-is, as-bytecode, as __init__.py, -as-bytecode
-      if os.path.isfile(curr):
-        return curr
-      elif os.path.isfile(curr + self.bytecache_suffix):
-        return curr + self.bytecache_suffix  # use existing cache file
-      elif os.path.isdir(curr):
-        temp = os.path.join(curr, '__init__.py')
-        if not os.path.isfile(temp):
-          temp += self.bytecache_suffix  # check existing cache file
-        if os.path.isfile(temp):
-          return temp
+    if not file.endswith(".py"):
+      return self.find_module(file + ".py", directory, path)
 
-      if quit:
-        break  # We don't need to do this again if the file is absolute
-
-    if not file.endswith('.py'):
-      # Try again.
-      return self._get_best_candidate(file + '.py', main_dir, search_path, parent_context)
-
-    return None
+    return None, None
 
   @classmethod
   def _exec_module(cls, mod, load_file, mode):
