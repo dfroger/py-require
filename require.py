@@ -102,20 +102,20 @@ class Require(types.ModuleType):
       directory = os.getcwd()
 
     search_path = itertools.chain(path, parent_context.path_all if parent_context else [])
-    module_file, real_file, info = self.find_module(file, directory, search_path)
-    if not module_file:
+    load_file, real_file, info = self.find_module(file, directory, search_path)
+    if not load_file:
       raise self.error(file)
 
     cascade_index = parent_context.cascade_index if parent_context else None
-    return self.load_file(module_file, real_file, info, path, reload,
+    return self.load_file(load_file, real_file, info, path, reload,
       cascade, inplace, get_exports, cascade_index, parent_context)
 
-  def load_file(self, module_file, real_file=None, info=None, path=(),
+  def load_file(self, load_file, real_file=None, info=None, path=(),
                 reload=False, cascade=False, inplace=False, get_exports=True,
                 cascade_index=None, parent_context=None):
     """
     Directly loads a file. If *real_file* is specified, it is considered
-    the filename of the original source file and *module_file* must be
+    the filename of the original source file and *load_file* must be
     a bytecache.
     """
 
@@ -131,16 +131,16 @@ class Require(types.ModuleType):
       raise TypeError("require(): get_exports must be callable, True or False")
 
     # Normalize filenames.
-    module_file = normpath(module_file)
+    load_file = normpath(load_file)
     real_file = normpath(real_file) if real_file else None
 
     # If there is a "real_file" version for the file we should load,
-    # we expect the "module_file" to be a bytecache version.
+    # we expect the "load_file" to be a bytecache version.
     if real_file:
       mode = 'bytecode'
     else:
       mode = 'source'
-      real_file = module_file
+      real_file = load_file
 
     mod = self.modules.get(real_file)
     if not reload and mod is not None:
@@ -155,18 +155,19 @@ class Require(types.ModuleType):
 
     if not (mod is not None and reload and inplace):
       mod = types.ModuleType(real_file)
-    mod.__file__ = module_file
+    mod.__file__ = load_file
     mod.__require_module_context__ = context
     mod.require = self
     self.modules[real_file] = mod
     self.init_module(mod, info)
 
     try:
-      code = self._exec_module(mod, module_file, mode)
+      code = self._exec_module(mod, load_file, mode)
     except BaseException:
-      self.modules.pop(module_file, None)
-      self.free_module(mod, info)
+      self.modules.pop(load_file, None)
       raise
+    finally:
+      self.free_module(mod, info, *sys.exc_info())
 
     write = self.write_bytecode
     if write is None:
@@ -196,10 +197,10 @@ class Require(types.ModuleType):
     :param path: An iterable (not sequence!) of the explicitly passed
       *path* list and inherited search paths from parent :meth:`require`
       calls.
-    :return: A tuple of ``(module_file, real_file, info)`` where the
-      *module_file* is the file that will actually be loaded and *real_file*
+    :return: A tuple of ``(load_file, real_file, info)`` where the
+      *load_file* is the file that will actually be loaded and *real_file*
       is the name of the file in its original source version. If there is
-      no original source version (that is, *module_file* is the source file
+      no original source version (that is, *load_file* is the source file
       and not a bytecache version), it should be None. If the module can not
       be found, ``(None, None, None)`` should be returned.
     """
@@ -248,12 +249,10 @@ class Require(types.ModuleType):
 
     pass
 
-  def free_module(self, mod, info):
+  def free_module(self, mod, info, exc_type, exc_value, exc_tb):
     """
-    Called when the module was being executed but the execution resulted
-    in an exception. In this case, the module is already removed from the
-    :class:`Require` instances module cache and this method should be
-    implemented to remove any references created in :meth:`init_module`.
+    Called when the module was executed. If an exception was raised during
+    the module execution, any reference to the module should be removed.
     """
 
     pass

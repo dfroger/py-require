@@ -73,11 +73,11 @@ easily result in dependency conflicts.
 >
 > `require.error` -- If the module could not be found or loaded.
 
-#### `require.load_file(module_file, real_file=None, info=None, path=(), reload=False, cascade=False, inplace=False, get_exports=True, cascade_index=None, parent_context=None)`
+#### `require.load_file(load_file, real_file=None, info=None, path=(), reload=False, cascade=False, inplace=False, get_exports=True, cascade_index=None, parent_context=None)`
 
 > Load a Python module by filename. If *real_file* is specified, it must
 > be the name of the original source file and is the name under which
-> the module is stored. *module_file* must be the name of a bytecache
+> the module is stored. *load_file* must be the name of a bytecache
 > file in that case.
 >
 > The *info* parameter is passed to `Require.init_module()` and
@@ -116,7 +116,7 @@ easily result in dependency conflicts.
 - add `Require.free_module()` function
 - filenames are now normalized before using them as module names
 - `Require.find_module()` must now return a three-element tuple
-  `(module_file, real_file, info)` instead of a two element tuple
+  `(load_file, real_file, info)` instead of a two element tuple
 
 #### v0.14
 
