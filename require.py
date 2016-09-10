@@ -29,6 +29,9 @@ import posixpath
 import types
 import sys
 
+def normpath(x):
+  return os.path.normpath(os.path.abspath(x))
+
 class RequireError(ImportError):
   pass
 
@@ -82,13 +85,6 @@ class Require(types.ModuleType):
     if reload and cascade:
       self.cascade_index += 1
 
-    if get_exports is True:
-      get_exports = lambda mod: getattr(mod, 'exports', mod)
-    elif get_exports is False:
-      get_exports = lambda mod: mod
-    elif not callable(get_exports):
-      raise TypeError("require(): get_exports must be callable, True or False")
-
     parent_globals = sys._getframe(_stackdepth).f_globals
     parent_context = parent_globals.get('__require_module_context__')
     if isinstance(parent_context, RequireModuleContext):
@@ -105,15 +101,38 @@ class Require(types.ModuleType):
     elif not directory:
       directory = os.getcwd()
 
+    search_path = itertools.chain(path, parent_context.path_all if parent_context else [])
+    module_file, real_file, info = self.find_module(file, directory, search_path)
+    if not module_file:
+      raise self.error(file)
+
     cascade_index = parent_context.cascade_index if parent_context else None
+    return self.load_file(module_file, real_file, info, path, reload,
+      cascade, inplace, get_exports, cascade_index, parent_context)
+
+  def load_file(self, module_file, real_file=None, info=None, path=(),
+                reload=False, cascade=False, inplace=False, get_exports=True,
+                cascade_index=None, parent_context=None):
+    """
+    Directly loads a file. If *real_file* is specified, it is considered
+    the filename of the original source file and *module_file* must be
+    a bytecache.
+    """
+
     if cascade_index is None and reload and cascade:
       # A new cascade reload is started, use a new cascade index.
       cascade_index = self.cascade_index
 
-    search_path = itertools.chain(path, parent_context.path_all if parent_context else [])
-    module_file, real_file = self.find_module(file, directory, search_path)
-    if not module_file:
-      raise self.error(file)
+    if get_exports is True:
+      get_exports = lambda mod: getattr(mod, 'exports', mod)
+    elif get_exports is False:
+      get_exports = lambda mod: mod
+    elif not callable(get_exports):
+      raise TypeError("require(): get_exports must be callable, True or False")
+
+    # Normalize filenames.
+    module_file = normpath(module_file)
+    real_file = normpath(real_file) if real_file else None
 
     # If there is a "real_file" version for the file we should load,
     # we expect the "module_file" to be a bytecache version.
@@ -140,11 +159,13 @@ class Require(types.ModuleType):
     mod.__require_module_context__ = context
     mod.require = self
     self.modules[real_file] = mod
+    self.init_module(mod, info)
 
     try:
       code = self._exec_module(mod, module_file, mode)
     except BaseException:
       self.modules.pop(module_file, None)
+      self.free_module(mod, info)
       raise
 
     write = self.write_bytecode
@@ -175,12 +196,12 @@ class Require(types.ModuleType):
     :param path: An iterable (not sequence!) of the explicitly passed
       *path* list and inherited search paths from parent :meth:`require`
       calls.
-    :return: A tuple of ``(module_file, real_file)`` where the *module_file*
-      is the file that will actually be loaded and *real_file* is the name
-      of the file in its original source version. If there is no original
-      source version (that is, *module_file* is the source file and not a
-      bytecache version), it should be None. If the module can not be found,
-      ``(None, None)`` should be returned.
+    :return: A tuple of ``(module_file, real_file, info)`` where the
+      *module_file* is the file that will actually be loaded and *real_file*
+      is the name of the file in its original source version. If there is
+      no original source version (that is, *module_file* is the source file
+      and not a bytecache version), it should be None. If the module can not
+      be found, ``(None, None, None)`` should be returned.
     """
 
     if not isinstance(path, list):
@@ -188,7 +209,7 @@ class Require(types.ModuleType):
 
     if file.startswith(os.curdir):
       if directory is None:
-        return None, None
+        return None, None, None
       file = os.path.abspath(os.path.normpath(os.path.join(directory, file)))
       check_path = [None]
     elif os.path.isabs(file):
@@ -206,17 +227,36 @@ class Require(types.ModuleType):
         if os.path.isfile(curr):
           # Choose the source file if its newer.
           if os.path.getmtime(curr) > os.path.getmtime(bytefile):
-            return curr, None
-        return bytefile, curr
+            return curr, None, None
+        return bytefile, curr, None
       elif os.path.isfile(curr):
-        return curr, None
+        return curr, None, None
       elif not curr.endswith(".py") and os.path.isdir(curr):
         return self.find_module(os.path.join(curr, '__init__.py'), directory, path)
 
     if not file.endswith(".py"):
       return self.find_module(file + ".py", directory, path)
 
-    return None, None
+    return None, None, None
+
+  def init_module(self, mod, info):
+    """
+    Called before the module is being executed, giving a chance to
+    initialize additional module members. The *info* parameter is
+    the info value returned by :meth:`find_module`.
+    """
+
+    pass
+
+  def free_module(self, mod, info):
+    """
+    Called when the module was being executed but the execution resulted
+    in an exception. In this case, the module is already removed from the
+    :class:`Require` instances module cache and this method should be
+    implemented to remove any references created in :meth:`init_module`.
+    """
+
+    pass
 
   @classmethod
   def _exec_module(cls, mod, load_file, mode):
