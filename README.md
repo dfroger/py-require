@@ -27,6 +27,11 @@ easily result in dependency conflicts.
 
 ## API
 
+#### `require.new(path=(), write_bytecode=None)`
+
+> Create a new independent instance. Note that the *path* argument is
+> processed with `require.preprocess_path()`.
+
 #### `require(file, directory=None, path=(), reload=False, cascade=False, inplace=False, get_exports=True)`
 
 > Loads a Python module by filename. If *file* is a relative path starting
@@ -54,6 +59,9 @@ easily result in dependency conflicts.
 >   `sys._getframe()`.  
 > - *path* -- A list of additional search paths when loading other
 >   modules with `require()`. Subsequent loads inherit this search path.
+>   Note that these paths are preprocesed with `require.preprocess_path()`,
+>   thus elements that start with `!` (exclamation mark) will be assumed
+>   relative to the directory that the `require()` function is called from.
 > - *reload* -- True to force reload the module.  
 > - *cascade* -- If *reload* is True, passing True causes a cascade
 >   reload.  
@@ -112,6 +120,11 @@ easily result in dependency conflicts.
 #### v0.16
 
 - `require.path` is now taken into account when searching for modules again
+- add `require.new()` method
+- add `require.preprocess_path()` method
+- add `Require(_stackdepth=0)` argument
+- `require.new(path)` and `require(path)` arguments are now preprocessed
+  with the `require.preprocess_path()` method
 
 #### v0.15
 

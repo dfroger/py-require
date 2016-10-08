@@ -57,21 +57,52 @@ class Require(types.ModuleType):
 
   error = RequireError
 
-  def __init__(self, path=(), write_bytecode=None, _keep_alive=None):
+  def __init__(self, path=(), write_bytecode=None, _keep_alive=None, _stackdepth=0):
     super(Require, self).__init__('require')
     self.bytecache_suffix = 'c@' + sys.version[:3].replace('.', '-')
     self.modules = {}
-    self.path = list(path)
+    self.path = self.preprocess_path(path, _stackdepth=_stackdepth+1)
     self.cascade_index = 0
     self.write_bytecode = write_bytecode
     self._keep_alive = _keep_alive
     if _keep_alive:
-      self.Require = Require
+      self.Require = _keep_alive.Require
       self.__file__ = _keep_alive.__file__
+
+  @staticmethod
+  def preprocess_path(path, _stackdepth=0):
+    """
+    Preprocesses a list of search directories. Items prefixed with `!`
+    (exclamation mark) will be considered relative to the parent directory
+    of the module that called this function. Returns a new list of paths.
+    """
+
+    parent_globals = sys._getframe(_stackdepth + 1).f_globals
+    result = []
+    dirname = None
+    for item in path:
+      if item.startswith("!"):
+        item = item[1:]
+        if not os.path.isabs(item):
+          if dirname is None:
+            dirname = os.path.dirname(parent_globals['__file__'])
+          print("Joining %r with %r".format(dirname, item))
+          item = os.path.join(dirname, item)
+      result.append(item)
+    return result
+
+  @classmethod
+  def new(cls, *args, **kwargs):
+    """
+    Create a new `Require` instance.
+    """
+
+    kwargs['_stackdepth'] = kwargs.get('_stackdepth', 0) + 1
+    return cls(*args, **kwargs)
 
   def require(self, file, directory=None, path=(), reload=False,
               cascade=False, inplace=False, get_exports=True,
-              _stackdepth=1):
+              _stackdepth=0):
     """
     Load a Python module from the specified *file*. The loaded file
     will be executed with the ``require()`` function available so it
@@ -85,7 +116,7 @@ class Require(types.ModuleType):
     if reload and cascade:
       self.cascade_index += 1
 
-    parent_globals = sys._getframe(_stackdepth).f_globals
+    parent_globals = sys._getframe(_stackdepth+1).f_globals
     parent_context = parent_globals.get('__require_module_context__')
     if isinstance(parent_context, RequireModuleContext):
       # Allow cascading reloads to propagate.
@@ -101,6 +132,7 @@ class Require(types.ModuleType):
     elif not directory:
       directory = os.getcwd()
 
+    path = self.preprocess_path(path, _stackdepth=_stackdepth+1)
     search_path = itertools.chain(path, parent_context.path_all if parent_context else [], self.path)
     load_file, real_file, info = self.find_module(file, directory, search_path)
     if not load_file:
@@ -182,7 +214,7 @@ class Require(types.ModuleType):
 
   def __call__(self, *args, **kwargs):
     """ Alias for ``require()``. """
-    kwargs['_stackdepth'] = kwargs.get('_stackdepth', 1) + 1
+    kwargs['_stackdepth'] = kwargs.get('_stackdepth', 0) + 1
     return self.require(*args, **kwargs)
 
   def find_module(self, file, directory, path):
