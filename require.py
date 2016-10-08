@@ -101,7 +101,7 @@ class Require(types.ModuleType):
     elif not directory:
       directory = os.getcwd()
 
-    search_path = itertools.chain(path, parent_context.path_all if parent_context else [])
+    search_path = itertools.chain(path, parent_context.path_all if parent_context else [], self.path)
     load_file, real_file, info = self.find_module(file, directory, search_path)
     if not load_file:
       raise self.error(file)

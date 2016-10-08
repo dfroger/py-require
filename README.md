@@ -109,6 +109,10 @@ easily result in dependency conflicts.
 
 ## Changelog
 
+#### v0.16
+
+- `require.path` is now taken into account when searching for modules again
+
 #### v0.15
 
 - add `require.load_file()` function
