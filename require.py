@@ -86,7 +86,6 @@ class Require(types.ModuleType):
         if not os.path.isabs(item):
           if dirname is None:
             dirname = os.path.dirname(parent_globals['__file__'])
-          print("Joining %r with %r".format(dirname, item))
           item = os.path.join(dirname, item)
       result.append(item)
     return result
