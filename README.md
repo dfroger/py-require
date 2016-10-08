@@ -117,6 +117,12 @@ easily result in dependency conflicts.
 
 ## Changelog
 
+#### v0.17
+
+- fix loading the `require` module without the `import` statement
+  when another instance of the `require` module was already imported
+  and present in `sys.modules`
+
 #### v0.16
 
 - `require.path` is now taken into account when searching for modules again

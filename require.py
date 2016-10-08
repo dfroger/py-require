@@ -66,7 +66,7 @@ class Require(types.ModuleType):
     self.write_bytecode = write_bytecode
     self._keep_alive = _keep_alive
     if _keep_alive:
-      self.Require = _keep_alive.Require
+      self.Require = Require
       self.__file__ = _keep_alive.__file__
 
   @staticmethod
@@ -333,7 +333,8 @@ class Require(types.ModuleType):
         return None
       raise
 
-require = Require(_keep_alive=sys.modules.get(__name__))
-
 if __name__ in sys.modules and globals() is vars(sys.modules[__name__]):
+  require = Require(_keep_alive=sys.modules.get(__name__))
   sys.modules[__name__] = require
+else:
+  require = Require()
