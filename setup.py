@@ -3,13 +3,6 @@ import os, sys
 from setuptools import setup
 
 def restify():
-  if os.path.isfile('README.md'):
-    if os.system('pandoc -s README.md -o README.rst') != 0:
-      print('-----------------------------------------------------------')
-      print('WARNING: pandoc command failed, could not restify README.md')
-      print('-----------------------------------------------------------')
-      if sys.stdout.isatty():
-        input("Enter to continue... ")
   with open('README.rst') as fp:
     return fp.read()
 
